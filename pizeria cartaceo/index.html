@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ordini Pizzeria">
+<meta name="theme-color" content="#1C1A17">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Ordini Pizzeria</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- BANNER ALLARME ASPORTO IN RITARDO (visibile su tutte le schermate) -->
+<div id="allarme-asporto-banner" class="allarme-banner hidden">
+  <span id="allarme-asporto-testo" class="allarme-testo">⏰ IN RITARDO</span>
+  <button id="btn-stop-allarme" class="allarme-stop-btn">🔕 FERMA</button>
+</div>
+
+<!-- SCHERMATA INIZIALE: scelta ruolo -->
+<div id="view-home" class="view view-home active">
+  <div class="home-wrap">
+    <h1 class="brand">🔥 Ordini<span>Pizzeria</span></h1>
+    <button class="role-btn role-cameriere" data-role="cameriere">
+      <span class="role-icon">🧾</span>
+      <span class="role-label">Sala</span>
+      <span class="role-sub">Prendi ordini e conti</span>
+    </button>
+    <button class="role-btn role-cucina" data-role="cucina">
+      <span class="role-icon">🍕</span>
+      <span class="role-label">Cucina</span>
+      <span class="role-sub">Ordini in arrivo</span>
+    </button>
+    <button class="role-btn role-bar" data-role="bar">
+      <span class="role-icon">☕</span>
+      <span class="role-label">Bar</span>
+      <span class="role-sub">Ordini in arrivo</span>
+    </button>
+    <button class="role-btn role-stampa" data-role="stampa">
+      <span class="role-icon">🖨️</span>
+      <span class="role-label">Stampa</span>
+      <span class="role-sub" id="stampa-badge-home">Foglietti cucina da stampare</span>
+    </button>
+    <button class="role-btn role-impostazioni" data-role="impostazioni">
+      <span class="role-icon">⚙️</span>
+      <span class="role-label">Impostazioni</span>
+      <span class="role-sub">Menù, prezzi, ingredienti</span>
+    </button>
+    <p id="conn-status" class="conn-status">Connessione in corso…</p>
+  </div>
+</div>
+
+<!-- SCHERMATA CAMERIERE -->
+<div id="view-cameriere" class="view">
+  <header class="topbar">
+    <button class="back-btn" data-back>←</button>
+    <h2 id="cameriere-title">Sala</h2>
+    <div style="width:40px"></div>
+  </header>
+
+  <div id="cameriere-sale-list" class="screen-body">
+    <h3 class="section-title">Scegli una sala</h3>
+    <div id="sale-list" class="sale-list"></div>
+    <h3 class="section-title" style="margin-top:22px;">Oppure</h3>
+    <button id="btn-vai-asporto" class="role-btn role-asporto">
+      <span class="role-icon">🥡</span>
+      <span class="role-label">Asporto</span>
+      <span class="role-sub">Ordinazioni da ritirare</span>
+    </button>
+  </div>
+
+  <div id="cameriere-tables" class="screen-body hidden">
+    <div class="tavolo-header">
+      <h3 id="sala-corrente-nome"></h3>
+      <button id="btn-back-sale" class="pill-btn">← Sale</button>
+    </div>
+    <div id="tables-grid" class="tables-grid"></div>
+  </div>
+
+  <div id="cameriere-asporto" class="screen-body hidden">
+    <div class="tavolo-header">
+      <h3>Asporto</h3>
+      <button id="btn-back-sale-2" class="pill-btn">← Sale</button>
+    </div>
+    <button id="btn-nuovo-asporto" class="btn-secondary full">+ Nuova ordinazione asporto</button>
+    <div id="asporto-list"></div>
+  </div>
+
+  <div id="cameriere-tavolo" class="screen-body hidden">
+    <div class="tavolo-header">
+      <h3 id="tavolo-label"></h3>
+      <div class="tavolo-actions">
+        <button id="btn-note-tavolo" class="pill-btn">📝 Note</button>
+        <button id="btn-conto-tavolo" class="pill-btn">🧾 Conto</button>
+      </div>
+    </div>
+
+    <input id="menu-search-input" type="search" class="menu-search" placeholder="🔍 Cerca piatto...">
+    <div id="menu-container"></div>
+
+    <div id="carrello-lista" class="carrello-lista"></div>
+
+    <div id="carrello-bar" class="carrello-bar hidden">
+      <div class="carrello-info">
+        <span id="carrello-count">0</span> articoli · <span id="carrello-totale">€0,00</span>
+      </div>
+      <button id="btn-invia-cucina" class="btn-primary">Invia in cucina</button>
+    </div>
+  </div>
+
+  <div id="cameriere-conto" class="screen-body hidden">
+    <div class="tavolo-header">
+      <h3 id="conto-label"></h3>
+    </div>
+    <div id="conto-lista"></div>
+    <div class="conto-totale-riga">
+      <span>Totale</span>
+      <span id="conto-totale-finale">€0,00</span>
+    </div>
+    <div id="conto-parziale-wrap" class="conto-parziale-wrap hidden">
+      <label class="field-label">In quante persone siete?</label>
+      <input id="conto-parziale-persone" type="number" inputmode="numeric" min="1" step="1" placeholder="es. 4">
+      <div id="conto-parziale-risultato" class="conto-parziale-risultato"></div>
+    </div>
+    <div class="conto-btns">
+      <button id="btn-conto-parziale" class="btn-secondary">👥 Conto parziale</button>
+      <button id="btn-stampa-scontrino" class="btn-secondary">🖨️ Stampa scontrino</button>
+      <button id="btn-aggiungi-ordine" class="btn-secondary">+ Aggiungi ordinazione</button>
+      <button id="btn-chiudi-conto" class="btn-danger">Chiudi conto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE NUOVA ORDINAZIONE ASPORTO -->
+<div id="modal-asporto" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Nuova ordinazione asporto</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Nome / riferimento ordinazione</label>
+      <input id="asporto-nome-input" type="text" placeholder="Es. Mario, Rossi..." autocomplete="off">
+      <div id="asporto-suggerimenti" class="suggerimenti-list hidden"></div>
+
+      <label class="field-label">Ora di ritiro</label>
+      <input id="asporto-ora-input" type="time">
+      <p class="hint-text">Se non viene segnato "Pronto" entro quest'ora, l'app suonerà un avviso.</p>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-crea-asporto" class="btn-primary">Crea e inizia ordine</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE PERSONALIZZAZIONE PIATTO -->
+<div id="modal-piatto" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="modal-piatto-nome"></h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body" id="modal-piatto-body"></div>
+    <div class="modal-foot">
+      <div class="qty-control">
+        <button id="qty-meno">−</button>
+        <span><span id="qty-val">1</span><span id="qty-unit-label" class="qty-unit-label"></span></span>
+        <button id="qty-piu">+</button>
+      </div>
+      <div id="peso-control" class="peso-control hidden">
+        <label for="peso-input">Peso (<span id="peso-unita-label">dag</span>)</label>
+        <input id="peso-input" type="number" inputmode="decimal" min="0" step="1" placeholder="es. 32">
+      </div>
+      <button id="btn-aggiungi-carrello" class="btn-primary">Aggiungi · <span id="modal-prezzo">€0,00</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE PIZZA FAMIGLIA -->
+<div id="modal-famiglia" class="modal hidden">
+  <div class="modal-card modal-card-tall">
+    <div class="modal-head">
+      <h3 id="famiglia-titolo">Pizza Famiglia</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Quanti gusti?</label>
+      <div class="fam-num-gusti">
+        <button class="fam-num-btn active" data-num="1">1 gusto</button>
+        <button class="fam-num-btn" data-num="2">2 gusti</button>
+        <button class="fam-num-btn" data-num="3">3 gusti</button>
+      </div>
+      <div id="fam-gusti-container"></div>
+      <label class="field-label">Nota</label>
+      <textarea id="fam-nota" rows="2" placeholder="Es. tagliare a metà, ecc..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-aggiungi-famiglia" class="btn-primary">Aggiungi · <span id="famiglia-prezzo">€0,00</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE NOTE TAVOLO -->
+<div id="modal-note" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Note tavolo <span id="note-tavolo-numero"></span></h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="note-tavolo-testo" rows="5" placeholder="Es. allergia noci, sedia bimbo, richiesta particolare..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-salva-note" class="btn-primary">Salva nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHERMATA CUCINA -->
+<div id="view-cucina" class="view">
+  <header class="topbar">
+    <button class="back-btn" data-back>←</button>
+    <h2>🍕 Cucina</h2>
+    <button id="btn-sound-toggle-cucina" class="icon-btn">🔊</button>
+  </header>
+  <div class="screen-body screen-body-cucina cucina-doppia-colonna">
+    <div class="cucina-colonna cucina-colonna-asporto">
+      <h4 class="cucina-colonna-titolo">🥡 Asporto</h4>
+      <div id="cucina-lista-asporto" class="cucina-scroll cucina-scroll-singola"></div>
+    </div>
+    <div class="cucina-colonna cucina-colonna-sala">
+      <h4 class="cucina-colonna-titolo">🍽️ Tavoli</h4>
+      <div id="cucina-lista-sala" class="cucina-scroll cucina-scroll-griglia"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHERMATA BAR -->
+<div id="view-bar" class="view">
+  <header class="topbar">
+    <button class="back-btn" data-back>←</button>
+    <h2>☕ Bar</h2>
+    <button id="btn-sound-toggle-bar" class="icon-btn">🔊</button>
+  </header>
+  <div class="screen-body screen-body-cucina">
+    <div id="bar-lista" class="cucina-lista"></div>
+    <div id="bar-paginazione" class="cucina-paginazione hidden">
+      <button id="pag-prec-bar" class="pill-btn">‹ Prec.</button>
+      <span id="pag-info-bar">1/1</span>
+      <button id="pag-succ-bar" class="pill-btn">Succ. ›</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHERMATA CODA DI STAMPA -->
+<div id="view-stampa" class="view">
+  <header class="topbar">
+    <button class="back-btn" data-back>←</button>
+    <h2>🖨️ Coda di stampa</h2>
+    <div style="width:40px"></div>
+  </header>
+  <div class="screen-body">
+    <p class="hint-text" style="margin-bottom:14px;">Un foglietto per ogni invio in cucina. Premi Stampa per mandarlo alla Labelife.</p>
+    <div id="stampa-lista"></div>
+  </div>
+</div>
+
+<!-- SCHERMATA IMPOSTAZIONI -->
+<div id="view-impostazioni" class="view">
+  <header class="topbar">
+    <button class="back-btn" data-back>←</button>
+    <h2>Impostazioni</h2>
+    <div style="width:40px"></div>
+  </header>
+  <div class="screen-body">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-piatti">Piatti</button>
+      <button class="tab-btn" data-tab="tab-ingredienti">Ingredienti</button>
+      <button class="tab-btn" data-tab="tab-varianti">Varianti</button>
+      <button class="tab-btn" data-tab="tab-categorie">Categorie</button>
+      <button class="tab-btn" data-tab="tab-sale">Sale</button>
+      <button class="tab-btn" data-tab="tab-archivio">Archivio</button>
+      <button class="tab-btn" data-tab="tab-altro">Altro</button>
+    </div>
+
+    <div id="tab-piatti" class="tab-panel active">
+      <button id="btn-nuovo-piatto" class="btn-secondary full">+ Nuovo piatto</button>
+      <div id="lista-piatti-admin"></div>
+    </div>
+
+    <div id="tab-ingredienti" class="tab-panel">
+      <button id="btn-nuovo-ingrediente" class="btn-secondary full">+ Nuovo ingrediente</button>
+      <div id="lista-ingredienti-admin"></div>
+    </div>
+
+    <div id="tab-varianti" class="tab-panel">
+      <p class="hint-text">Le varianti sono modifiche al piatto con un costo proprio (es. impasto doppio, senza glutine) — non sono ingredienti fisici da aggiungere/togliere.</p>
+      <button id="btn-nuova-variante" class="btn-secondary full">+ Nuova variante</button>
+      <div id="lista-varianti-admin"></div>
+    </div>
+
+    <div id="tab-categorie" class="tab-panel">
+      <button id="btn-nuova-categoria" class="btn-secondary full">+ Nuova categoria</button>
+      <div id="lista-categorie-admin"></div>
+    </div>
+
+    <div id="tab-sale" class="tab-panel">
+      <p class="hint-text">Rinomina le 5 sale e imposta quanti tavoli ha ciascuna.</p>
+      <div id="lista-sale-admin"></div>
+    </div>
+
+    <div id="tab-archivio" class="tab-panel">
+      <p class="hint-text">Tutti gli ordini con conto chiuso restano qui. Puoi esportarli in un file (da salvare poi anche su una chiavetta) o eliminare quelli che non ti servono più.</p>
+      <button id="btn-esporta-archivio" class="btn-secondary full">⬇️ Esporta tutto in CSV</button>
+      <div class="archivio-toolbar">
+        <label class="switch-row" style="margin:0;"><input type="checkbox" id="archivio-seleziona-tutti"> <span>Seleziona tutti (in questa pagina)</span></label>
+        <button id="btn-elimina-selezionati-archivio" class="btn-danger-outline" disabled>Elimina selezionati (<span id="archivio-num-selezionati">0</span>)</button>
+      </div>
+      <div id="lista-archivio-admin"></div>
+      <div id="archivio-paginazione" class="cucina-paginazione hidden">
+        <button id="pag-prec-archivio" class="pill-btn">‹ Prec.</button>
+        <span id="pag-info-archivio">1/1</span>
+        <button id="pag-succ-archivio" class="pill-btn">Succ. ›</button>
+      </div>
+    </div>
+
+    <div id="tab-altro" class="tab-panel">
+      <p class="hint-text">Se ci sono ordini bloccati/sbagliati che non si chiudono mai, azzerali da qui: archivia TUTTI gli ordini attualmente attivi (Sala, Cucina, Bar, Asporto). Non tocca il menù né le sale.</p>
+      <button id="btn-reset-ordini" class="btn-danger full">🔄 Azzera tutti gli ordini attivi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE EDIT PIATTO (impostazioni) -->
+<div id="modal-edit-piatto" class="modal hidden">
+  <div class="modal-card modal-card-tall">
+    <div class="modal-head">
+      <h3 id="edit-piatto-titolo">Nuovo piatto</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Nome</label>
+      <input id="edit-piatto-nome" type="text" placeholder="Es. Margherita">
+
+      <label class="field-label">Categoria</label>
+      <select id="edit-piatto-categoria"></select>
+
+      <label class="switch-row"><input type="checkbox" id="edit-piatto-famiglia"> <span>🍕 Pizza Famiglia (1-3 gusti a scelta, prezzo calcolato automaticamente in base ai gusti)</span></label>
+
+      <div id="edit-piatto-normale-wrap">
+      <label class="field-label">Prezzo base (€)</label>
+      <input id="edit-piatto-prezzo" type="number" step="0.10" placeholder="7.50">
+
+      <label class="switch-row"><input type="checkbox" id="edit-piatto-prezzo-peso"> <span>Prezzo a peso (es. carne/pesce venduti a etto/decagrammo) — il prezzo base indicato sopra verrà moltiplicato per l'unità di peso che il cameriere seleziona al momento dell'ordine, invece che per il numero di porzioni</span></label>
+      <div id="edit-piatto-unita-peso-wrap" class="hidden">
+        <label class="field-label">Unità di peso (es. "dag", "hg", "kg")</label>
+        <input id="edit-piatto-unita-peso" type="text" placeholder="dag">
+      </div>
+
+      <label class="field-label">È una pizza / piatto componibile?</label>
+      <label class="switch-row"><input type="checkbox" id="edit-piatto-componibile"> <span>Permetti di togliere/aggiungere ingredienti</span></label>
+
+      <div id="edit-piatto-ingredienti-wrap" class="hidden">
+        <label class="field-label">Ingredienti già nella ricetta (rimovibili)</label>
+        <div id="edit-piatto-rimovibili" class="check-list"></div>
+
+        <label class="field-label">Ingredienti extra disponibili</label>
+        <div id="edit-piatto-extra" class="check-list"></div>
+
+        <label class="field-label">Varianti disponibili (con costo proprio)</label>
+        <div id="edit-piatto-varianti" class="check-list"></div>
+
+        <label class="switch-row"><input type="checkbox" id="edit-piatto-glutine"> <span>Disponibile senza glutine</span></label>
+        <label class="switch-row"><input type="checkbox" id="edit-piatto-lattosio"> <span>Disponibile senza lattosio</span></label>
+      </div>
+      </div>
+    </div>
+    <div class="modal-foot modal-foot-split">
+      <button id="btn-elimina-piatto" class="btn-danger-outline">Elimina</button>
+      <button id="btn-salva-piatto" class="btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE EDIT INGREDIENTE -->
+<div id="modal-edit-ingrediente" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="edit-ingrediente-titolo">Nuovo ingrediente</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Nome</label>
+      <input id="edit-ingrediente-nome" type="text" placeholder="Es. Mozzarella extra">
+      <label class="field-label">Sovrapprezzo se aggiunto (€)</label>
+      <input id="edit-ingrediente-prezzo" type="number" step="0.10" placeholder="1.00">
+      <p class="hint-text">Se il cliente lo toglie da una ricetta, non viene applicato alcun addebito.</p>
+    </div>
+    <div class="modal-foot modal-foot-split">
+      <button id="btn-elimina-ingrediente" class="btn-danger-outline">Elimina</button>
+      <button id="btn-salva-ingrediente" class="btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE EDIT VARIANTE -->
+<div id="modal-edit-variante" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="edit-variante-titolo">Nuova variante</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Nome</label>
+      <input id="edit-variante-nome" type="text" placeholder="Es. Impasto doppio">
+      <label class="field-label">Costo della variante (€)</label>
+      <input id="edit-variante-prezzo" type="number" step="0.10" placeholder="2.50">
+    </div>
+    <div class="modal-foot modal-foot-split">
+      <button id="btn-elimina-variante" class="btn-danger-outline">Elimina</button>
+      <button id="btn-salva-variante" class="btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE EDIT CATEGORIA -->
+<div id="modal-edit-categoria" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="edit-categoria-titolo">Nuova categoria</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Nome categoria</label>
+      <input id="edit-categoria-nome" type="text" placeholder="Es. Pizze">
+      <label class="field-label">Reparto di preparazione</label>
+      <select id="edit-categoria-reparto">
+        <option value="cucina">🍕 Cucina</option>
+        <option value="bar">☕ Bar</option>
+        <option value="nessuno">🧾 Solo conto (nessuna preparazione)</option>
+      </select>
+      <p class="hint-text">Decide in quale schermata (Cucina o Bar) finiscono da preparare i piatti di questa categoria. "Solo conto" è per voci come coperto/servizio: compaiono nel conto ma non generano nessun ticket.</p>
+    </div>
+    <div class="modal-foot modal-foot-split">
+      <button id="btn-elimina-categoria" class="btn-danger-outline">Elimina</button>
+      <button id="btn-salva-categoria" class="btn-primary">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN IMPOSTAZIONI -->
+<div id="modal-pin" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>PIN impostazioni</h3>
+      <button class="modal-close" data-close-modal>✕</button>
+    </div>
+    <div class="modal-body">
+      <input id="pin-input" type="password" inputmode="numeric" placeholder="Inserisci PIN">
+      <p id="pin-errore" class="pin-errore hidden">PIN errato</p>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-conferma-pin" class="btn-primary">Entra</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

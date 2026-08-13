@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Importa menù — Ordini Pizzeria</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="screen-body" style="max-width:640px; margin:0 auto; padding-top:32px;">
+  <h2>Importa il menù in Firestore</h2>
+  <p class="hint-text">
+    Questa pagina carica UNA VOLTA SOLA il menù (categorie, ingredienti, piatti)
+    nel tuo database Firebase. Usala solo la prima volta, dopo aver configurato
+    <code>firebase-config.js</code>. Se la usi di nuovo, sovrascriverà eventuali
+    modifiche fatte da Impostazioni sugli stessi elementi.
+  </p>
+  <button id="btn-importa" class="btn-primary full" style="width:100%;">Importa il menù ora</button>
+  <div id="log" style="margin-top:20px; font-family:monospace; font-size:0.85rem; white-space:pre-wrap;"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="seed-data.js"></script>
+<script>
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+const logEl = document.getElementById("log");
+function log(msg) { logEl.textContent += msg + "\n"; }
+
+document.getElementById("btn-importa").addEventListener("click", async () => {
+  if (!confirm("Importare il menù? Questa operazione scrive/sovrascrive categorie, ingredienti e piatti nel database.")) return;
+  logEl.textContent = "";
+  try {
+    log("Import categorie...");
+    let batch = db.batch();
+    SEED_CATEGORIES.forEach(c => batch.set(db.collection("categories").doc(c.id), { name: c.name, reparto: c.reparto || "cucina" }));
+    await batch.commit();
+    log("✓ " + SEED_CATEGORIES.length + " categorie");
+
+    log("Import ingredienti...");
+    batch = db.batch();
+    SEED_INGREDIENTS.forEach(i => batch.set(db.collection("ingredients").doc(i.id), { name: i.name, price: i.price }));
+    await batch.commit();
+    log("✓ " + SEED_INGREDIENTS.length + " ingredienti");
+
+    log("Import varianti...");
+    batch = db.batch();
+    SEED_VARIANTI.forEach(v => batch.set(db.collection("varianti").doc(v.id), { name: v.name, price: v.price }));
+    await batch.commit();
+    log("✓ " + SEED_VARIANTI.length + " varianti");
+
+    log("Import piatti...");
+    // Firestore permette max 500 operazioni per batch: dividiamo se necessario
+    const chunks = [];
+    for (let i = 0; i < SEED_DISHES.length; i += 400) chunks.push(SEED_DISHES.slice(i, i + 400));
+    for (const chunk of chunks) {
+      const b = db.batch();
+      chunk.forEach(dish => {
+        const { id, ...data } = dish;
+        b.set(db.collection("dishes").doc(id), data);
+      });
+      await b.commit();
+    }
+    log("✓ " + SEED_DISHES.length + " piatti");
+
+    log("\nFatto! Vai su index.html e apri Impostazioni per controllare i prezzi segnati come DA CONFERMARE.");
+  } catch (e) {
+    log("ERRORE: " + e.message);
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>
